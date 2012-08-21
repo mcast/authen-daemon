@@ -42,8 +42,20 @@ It might be better used in test suites and left off during production?
 
 sub embargo {
     my ($pkg) = @_;
-    my $whence = sprintf("%s line %s", (caller())[1,2]);
-    unshift @INC, sub { croak "require embargo by $pkg from $whence" };
+    $pkg->_noinc(__whence());
+    return;
+}
+
+sub __whence {
+    return sprintf("%s line %s", (caller(1))[1,2]);
+}
+
+sub _noinc {
+    my ($pkg, $whence) = @_;
+    unshift @INC, sub {
+        my ($me, $file) = @_;
+        croak "require($file): embargo from $whence via $pkg";
+    };
     return;
 }
 
@@ -52,7 +64,7 @@ sub import {
     my ($pkg, @opt) = @_;
     while (my $sw = shift @opt) {
         if ($sw eq 'auto') {
-            $auto = sprintf("%s line %s", (caller())[1,2]);
+            $auto = __whence();
         } else {
             croak "Unknown $pkg import '$sw'";
         }
@@ -61,9 +73,7 @@ sub import {
 }
 
 INIT {
-    my $whence = $auto;
-    my $pkg = __PACKAGE__;
-    unshift @INC, sub { croak "require embargo by $pkg from $whence" } if $auto;
+    __PACKAGE__->_noinc($auto) if $auto;
 }
 
 

@@ -2,9 +2,10 @@
 use strict;
 use warnings;
 
-use Test::More tests => 3;
+use Test::More tests => 7;
 BEGIN { require overload } # is require'd at runtime
 
+my $ln_close = __LINE__ + 1;
 use Authen::Daemon::NoMoreCode 'auto';
 use File::Find; # not needed
 
@@ -28,6 +29,17 @@ sub try_load {
 
 sub main {
     try_load('Data::Dumper', qr/embargo/);
+
+    my ($src, $ln_eval);
+    eval {
+        ($src, $ln_eval) = (__FILE__, __LINE__ + 1);
+        require Moon::On::Stick;
+    };
+    my $err = $@;
+    like($err, qr{Moon[:/]+On[:/]+Stick}, 'tells the wanted file');
+    like($err, qr{Authen::Daemon::NoMoreCode}, 'tells the cause');
+    like($err, qr{ at \Q$src\E line $ln_eval}, 'tells trigger line');
+    like($err, qr{ from \Q$src\E line $ln_close }, 'tells cause line');
 }
 
 main();
