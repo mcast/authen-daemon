@@ -5,7 +5,7 @@ use Carp;
 
 =head1 NAME
 
-Authd::NoMoreCode - prevent loading of code after main compilation
+Authen::Daemon::NoMoreCode - prevent code load after main compilation
 
 =head1 SYNOPSIS
 
