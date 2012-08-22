@@ -1,0 +1,48 @@
+=head1 NAME
+
+Authen::Daemon - tools to help a daemon to authenticate itself
+
+=head1 DESCRIPTION
+
+The modules in this distribution help code change from the usual
+example
+
+ my $conn = Net::Foo->connect(user => 'scotty',
+                              pass => 'beammeup');
+
+to something which moves the safety/convenience trade-off efficiently
+(hopefully effectively) towards safety and away from putting passwords
+in the source.
+
+ my $do_connect = sub {
+     my ($self, $pw, @args) = @_;
+     return Net::Foo->connect(pass => $pw, @args);
+ };
+ my $pwstash = Authen::Daemon::PassStash->new($do_connect, user => 'scotty');
+ 
+ # Insert password when you can.  It won't leak out.
+ $pwstash->set('beammeup');
+ 
+ # Later, as necessary
+ my $conn = eval { $pwstash->utilise() };
+ # various forms of fail...
+
+=head2 Context
+
+=over 4
+
+=item * I want a tool to sit and gather stats from an IMAP server.
+
+=item * The tool will need my password.
+
+I believe this is the "real" bug - the password in question is my main
+login password for several systems.  The fix would be an
+authentication token.
+
+=item * I won't be there to type it in.
+
+=item * I won't store my password in plaintext on the filesystem.
+
+=back
+
+=cut
