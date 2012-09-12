@@ -47,9 +47,13 @@ be handy.
 
 =head1 METHODS
 
-=head2 Devel::MemScan->scan($pat)
+=head2 Devel::MemScan->scan($pat, $obscured)
 
 Class method.  Accepts a Regexp or CODE refs.
+
+The optional C<$obscured> defaults to false, and allows the results to
+be returned with a ROT-128 obfuscation (like extended ROT-13) which
+may help reduce false positives on future matches.
 
 CODErefs are called with no arguments and should return a Regexp.
 This allows the creation of the regexp to be postponed, possibly into
@@ -67,7 +71,7 @@ C<@hit> are as above.
 =cut
 
 sub scan {
-    my ($called, $pat) = @_;
+    my ($called, $pat, $obscured) = @_;
     my $scan_pid = $$;
 
     die "expected wantarray" unless wantarray;
@@ -75,7 +79,7 @@ sub scan {
     my ($action, $failed, %hit);
     try {
 
-        # if we're forking, do that now
+        # if we're forking, do that before invoking CODEref
 
         $action = 'get regexp';
         if (ref($pat) eq 'CODE') {
@@ -122,8 +126,8 @@ sub scan {
                 while ($buff =~ m{($pat)}g) {
                     my $match = $1;
                     my $mpos = pos($buff) - length($match);
-                    obscure(\$match, 1);
-                    $hit{ $bpos + ($mpos - $bufflen) } =  $match;
+                    obscure(\$match, 1); # selfsearch
+                    $hit{ $bpos + ($mpos - $bufflen) } = $match;
                     # hash overwrite allows for a more complete hit on
                     # second bufferful; assumes a left-anchored regex
                     die "Abort - too many hits" if keys %hit > $maxhit;
@@ -136,7 +140,10 @@ sub scan {
         $failed = "During $action: $::_";
     };
 
-    obscure(\$hit{$_}, 0) foreach keys %hit;
+    unless ($obscured) {
+        # selfsearch
+        obscure(\$hit{$_}, 0) foreach keys %hit;
+    }
     return ($failed, map {[ $_, $hit{$_} ]} sort { $a <=> $b } keys %hit);
 }
 
@@ -144,8 +151,9 @@ sub scan_params {
     return (4096, 10000);
 }
 
-# an extended rot13-alike, hoping to reduce self-match hits
-sub obscure {
+# An extended rot13-alike, hoping to reduce self-match hits.
+# This wouldn't be needed if searcher ran outside searchee.
+sub obscure { # selfsearch
     my ($txtref, $hide) = @_;
     $$txtref =~ tr/\x00-\x7f\x80-\xff/\x80-\xff\x00-\x7f/;
     return ();
