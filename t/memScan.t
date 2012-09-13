@@ -69,13 +69,13 @@ sub unihit_tt {
     die "D:$fail" if defined $fail;
     my $jref = \$junk;
     cmp_ok(scalar @hit, '>', 0, "scan D($arg): should hit");
-    cmp_ok(scalar @hit, '<=', 2, 'scan D: expect just one hit')
+    cmp_ok(scalar @hit, '<=', 3, 'scan D($arg): expect 1..3 hits')
       or diag $dump->("$jref",
                       [ map { sprintf('0x%x', $_->[0]) } @hit ], # deref
                       \@hit);
   TODO: {
         local $TODO = 'tricky?';
-        cmp_ok(scalar @hit, '==', 1, 'scan D: want one hit - mystery variability');
+        cmp_ok(scalar @hit, '==', 1, 'scan D($arg): want one hit - mystery variability');
     }
 }
 
