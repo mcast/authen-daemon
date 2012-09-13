@@ -13,7 +13,7 @@ my $dump =
    require Data::Dumper && sub { Data::Dumper->Dump([ \@_ ], [ 'data' ]) });
 
 sub main {
-    my $tot = 23;
+    my $tot = 25;
     plan tests => $tot;
   SKIP: {
         basic_tt() or
@@ -27,6 +27,12 @@ sub main {
         unihit_tt($_) for (0..4);
         # repeat because it seems intermittent (on what conditions?);
         # but it also seems consistent within a Perl instance
+
+      TODO: {
+            local $TODO = 'tricky?';
+            wipeout_tt(1);
+        }
+        wipeout_tt(0);
     }
     return ();
 }
@@ -94,5 +100,40 @@ sub unihit_tt {
     }
 }
 
+sub wipeout_tt {
+    my ($arg) = @_;
+    my @junk = ('x' x 16);
+    substr($junk[0],3,5,"heff$arg");
+    substr($junk[0],8,5,'alump');
+
+    my ($fail, @hit1, @hit2);
+    my $pat = qr{...[h]ef+${arg}a\x6cum(?:ock)?\w+};
+
+    if ($arg) {
+        ($fail, @hit1) = Devel::MemScan->scan($pat, 1);
+        $fail ||= 'not found' unless @hit1;
+        die "find1($arg) fail ($fail)" if defined $fail;
+        scrub(\$_->[1]) foreach @hit1; # deref
+    }
+
+    scrub(\$junk[0]);
+
+    ($fail, @hit2) = Devel::MemScan->scan($pat);
+    die "find2($arg) fail ($fail)" if defined $fail;
+
+    is(scalar @hit2, 0, "wipeout($arg): gone after scrub")
+      or diag $dump->({ hit1 => \@hit1, hit2 => \@hit2, junk => \@junk });
+}
+
+sub scrub {
+    my ($ref) = @_;
+    if (ref($ref) eq 'SCALAR') {
+        my $L = length($$ref);
+        substr($$ref, 0, $L) = 'x' x $L;
+    } else {
+        die 'Cannot scrub '.ref($ref).' yet';
+    }
+    return ();
+}
 
 main();
