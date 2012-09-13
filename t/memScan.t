@@ -13,14 +13,14 @@ my $dump =
    require Data::Dumper && sub { Data::Dumper->Dump([ \@_ ], [ 'data' ]) });
 
 sub main {
-    my $tot = 21;
+    my $tot = 23;
     plan tests => $tot;
   SKIP: {
         basic_tt() or
           skip 'no hits in basic test - completely broken?', $tot - 2;
 
         context_tt();
-
+        patternhit_tt();
         mkregex_tt() or
           skip 'regex maker b0rk', $tot - 4;
 
@@ -49,6 +49,21 @@ sub context_tt {
     cmp_ok(scalar @has_context, '>', 0, 'scan B: includes context')
       or diag $dump->(@hit);
     return ();
+}
+
+sub patternhit_tt {
+    my $pat = qr{my_regex_sel[f]matches};
+    # assumption: regex compiler simplifies the [f] to just f
+    # and the pattern will then match that representation
+    my ($fail, @hit) = Devel::MemScan->scan($pat);
+    die "pathit1 fail: $fail" if defined $fail;
+    cmp_ok(scalar @hit, '>', 0, 'pathit1: expect regex match');
+
+    $pat = qr{another_reg(exp|ular_expression)_doesnt_match};
+    ($fail, @hit) = Devel::MemScan->scan($pat);
+    die "pathit2 fail: $fail" if defined $fail;
+    cmp_ok(scalar @hit, '==', 0, 'pathit2: expect no match')
+      or diag $dump->(@hit);
 }
 
 sub mkregex_tt {
