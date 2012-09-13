@@ -76,7 +76,7 @@ sub scan {
 
     die "expected wantarray" unless wantarray;
 
-    my ($action, $failed, %hit);
+    my ($buff, $bufflen, $action, $failed, %hit);
     try {
 
         # if we're forking, do that before invoking CODEref
@@ -98,9 +98,9 @@ sub scan {
 
         # these tweakbles are positional, and if overridden should
         # take defaults from superclass
-        my ($bufflen, $maxhit) = $called->scan_params;
+        ($bufflen, my $maxhit) = $called->scan_params;
 
-        my $buff = ' ' x (2 * $bufflen);
+        $buff = ' ' x (2 * $bufflen);
         foreach my $R (@region) {
             my ($start, $end, $what) = @$R;
             defined(sysseek $fh, $start, 0)
@@ -139,6 +139,15 @@ sub scan {
     } catch {
         $failed = "During $action: $::_";
     };
+
+    # attempt to scrub our work area - selfsearch
+    if ($bufflen) {
+        substr($buff, 0, $bufflen) =
+          substr($buff, $bufflen, $bufflen) =
+            '-' x $bufflen;
+        $buff =~ m{(-{20})}g;
+        $buff = $1;
+    }
 
     unless ($obscured) {
         # selfsearch
