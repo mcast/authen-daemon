@@ -218,6 +218,23 @@ more complicated when the reader is outside the process.
 L<http://unix.stackexchange.com/questions/6301/how-do-i-read-from-proc-pid-mem-under-linux#answer-y6302y>
 was useful - thanks @Gilles.
 
+
+=head1 CAVEATS
+
+=over 4
+
+=item * If you are searching for large patterns you will need to
+increase the size of the double-buffer window.
+
+=item * While this implementation runs in-memory, taking hits'
+contents is very likely to cause extra hits to show up.  Asserting
+that there be "only one" hit is fragile.
+
+XXX: More selective pattern capturing may mitigate this.
+
+=back
+
+
 =head1 SEE ALSO
 
 L<Win32::Process::Memory>.  I haven't looked at this.

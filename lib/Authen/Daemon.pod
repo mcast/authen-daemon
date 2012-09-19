@@ -45,4 +45,25 @@ authentication token.
 
 =back
 
+=head1 CAVEATS
+
+=over 4
+
+=item * It's not clear that this is going to be effective.
+
+There are too many places where a copy can be accidentally left lying
+around.
+
+This code carries some unit tests which attempt to show that the code
+is performing its function, but that involves searching the process
+memory and this is also not obviously reliable.
+
+=item * It's not clear that this is useful.
+
+For frequently entered passwords, it seems likely that memory will be
+already littered with copies made by other processes (I haven't
+looked).  Perhaps a few more don't matter.
+
+=back
+
 =cut
