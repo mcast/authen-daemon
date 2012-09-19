@@ -5,12 +5,11 @@ use warnings;
 use Test::More;
 use Devel::MemScan;
 
-our $junk;
+use lib 't/tlib';
+use DiagDump 'diagdump';
 
-my $dump =
-  ((eval { require YAML     } && \&YAML::Dump    ) ||
-   (eval { require YAML::XS } && \&YAML::XS::Dump) ||
-   require Data::Dumper && sub { Data::Dumper->Dump([ \@_ ], [ 'data' ]) });
+
+our $junk;
 
 sub main {
     my $tot = 25;
@@ -53,7 +52,7 @@ sub context_tt {
       map { $_->[1] } # deref: liable to change
         @hit;
     cmp_ok(scalar @has_context, '>', 0, 'scan B: includes context')
-      or diag $dump->(@hit);
+      or diagdump(hit => @hit);
     return ();
 }
 
@@ -69,7 +68,7 @@ sub patternhit_tt {
     ($fail, @hit) = Devel::MemScan->scan($pat);
     die "pathit2 fail: $fail" if defined $fail;
     cmp_ok(scalar @hit, '==', 0, 'pathit2: expect no match')
-      or diag $dump->(@hit);
+      or diagdump(hit => @hit);
 }
 
 sub mkregex_tt {
@@ -91,9 +90,10 @@ sub unihit_tt {
     my $jref = \$junk;
     cmp_ok(scalar @hit, '>', 0, "scan D($arg): should hit");
     cmp_ok(scalar @hit, '<=', 3, 'scan D($arg): expect 1..3 hits')
-      or diag $dump->("$jref",
-                      [ map { sprintf('0x%x', $_->[0]) } @hit ], # deref
-                      \@hit);
+      or diagdump
+        (jref => "$jref",
+         hit_hexaddr => [ map { sprintf('0x%x', $_->[0]) } @hit ], # deref
+         hit => \@hit);
   TODO: {
         local $TODO = 'tricky?';
         cmp_ok(scalar @hit, '==', 1, 'scan D($arg): want one hit - mystery variability');
@@ -122,7 +122,7 @@ sub wipeout_tt {
     die "find2($arg) fail ($fail)" if defined $fail;
 
     is(scalar @hit2, 0, "wipeout($arg): gone after scrub")
-      or diag $dump->({ hit1 => \@hit1, hit2 => \@hit2, junk => \@junk });
+      or diagdump(hit1 => \@hit1, hit2 => \@hit2, junk => \@junk);
 }
 
 sub scrub {
