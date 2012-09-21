@@ -10,9 +10,9 @@ use lib 't/tlib';
 use DiagDump 'diagdump';
 
 sub main {
-    plan tests => 24;
+    plan tests => 26;
 
-    interface_tt(); #  7
+    interface_tt(); #  9
     rots_tt();      # 10
     vape_tt();      #  7
 
@@ -23,13 +23,15 @@ sub main {
 sub interface_tt {
     my $o = Authen::Daemon::AutoScrub->new;
     is_deeply($o, [''], 'blank content');
+    ok($o->is_blank, 'is blank');
     $$o[0] = 'sekrit';
+    ok(!$o->is_blank, 'is not blank');
 
     my $o2 = $o->new; # clone
     is($$o2[0], 'sekrit', 'cloned');
     is_deeply($o2, [ 'sekrit' ], 'structure of clone');
     $o2->scrub;
-    is_deeply($o2, [''], 'blank again');
+    ok($o2->is_blank, 'blank again');
     is($$o[0], 'sekrit', 'source unaffected');
 
     my $o3 = Authen::Daemon::AutoScrub->new([ 'stuffything' ]);

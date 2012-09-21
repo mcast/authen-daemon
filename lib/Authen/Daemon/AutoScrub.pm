@@ -71,6 +71,22 @@ sub scrub {
     return ();
 }
 
+
+=head2 is_blank()
+
+Predicate returns true when content is the empty string.
+
+Being true suggests any previous data was scrubbed away, but it may
+not have been.  There is no record of whether that was actually done.
+
+=cut
+
+sub is_blank {
+    my ($self) = @_;
+    return $$self[0] eq '';
+}
+
+
 sub __per_char(&$) {
     my ($code, $txtref) = @_;
     my $L = length($$txtref);
