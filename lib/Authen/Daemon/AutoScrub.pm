@@ -67,7 +67,7 @@ sub scrub {
     for (my $i=0; $i<$L; $i++) {
         substr($$self[0], $i, 1) = "\x00";
     }
-    @$self = ('');
+    $$self[0] = ''; # blank it, don't replace the SCALAR
     return ();
 }
 

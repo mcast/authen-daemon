@@ -1,4 +1,5 @@
-package DiagDump;
+package # internal test tool
+  DiagDump;
 use strict;
 use warnings;
 
