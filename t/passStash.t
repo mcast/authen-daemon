@@ -63,7 +63,7 @@ sub plain_tt {
       or diagdump(p => $p, pw => $pw);
 
     my ($fail, @hit) = Devel::MemScan->scan(qr{hieK\d\whg\shi6Paey5});
-    die "plain: search fail: $fail" if defined $fail;
+    die "plain: search fail: $fail" if $fail;
     cmp_ok(scalar @hit, '<=', 1, 'plain: no more than one copy')
       or diagdump(hit => \@hit);
 

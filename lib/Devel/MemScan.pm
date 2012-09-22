@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Try::Tiny;
+use Devel::MemScan::Hit;
 
 =head1 NAME
 
@@ -40,20 +41,18 @@ go ahead.
 
 =head2 Hit format
 
-It's liable to change.  I assumed the most useful part of the result
-would be the scalar size of the hit array, but flanking data may also
-be handy.
+Hits returned are instances of the class L<Devel::MemScan::Hit>.
+
+The result may used just for the scalar size of the hit array, for the
+exact hit value (where the pattern allows ambiguity), or to capture
+flanking data.
 
 
 =head1 METHODS
 
-=head2 Devel::MemScan->scan($pat, $obscured)
+=head2 Devel::MemScan->scan($pat)
 
 Class method.  Accepts a Regexp or CODE refs.
-
-The optional C<$obscured> defaults to false, and allows the results to
-be returned with a ROT-128 obfuscation (like extended ROT-13) which
-may help reduce false positives on future matches.
 
 CODErefs are called with no arguments and should return a Regexp.
 This allows the creation of the regexp to be postponed, possibly into
@@ -62,16 +61,17 @@ a child process where it won't cause false positives.
 
 Returns C<($failed, @hit)>.
 
-C<$failed> is C<undef> unless there is a problem, then it is text
-describing the problem.  The method dies only for want of list
-context.
+C<$failed> is C<undef> for success, otherwise it is a (guaranteed
+true) text describing the problem.  The method dies only for want of
+list context.
 
-C<@hit> are as above.
+C<@hit> is a list of L<Devel::MemScan::Hit>, as above.  They are in no
+particular order.
 
 =cut
 
 sub scan {
-    my ($called, $pat, $obscured) = @_;
+    my ($called, $pat) = @_;
     my $scan_pid = $$;
 
     die "expected wantarray" unless wantarray;
@@ -124,10 +124,8 @@ sub scan {
                 }
 
                 while ($buff =~ m{($pat)}g) {
-                    my $match = $1;
-                    my $mpos = pos($buff) - length($match);
-                    obscure(\$match, 1); # selfsearch
-                    $hit{ $bpos + ($mpos - $bufflen) } = $match;
+                    my $mpos = $bpos +(pos($buff) -length($1) -$bufflen);
+                    $hit{$mpos} = Devel::MemScan::Hit->new([ $mpos, $1 ]);
                     # hash overwrite allows for a more complete hit on
                     # second bufferful; assumes a left-anchored regex
                     die "Abort - too many hits" if keys %hit > $maxhit;
@@ -140,23 +138,11 @@ sub scan {
         $failed = "During $action: $::_";
     };
 
-    unless ($obscured) {
-        # selfsearch
-        obscure(\$hit{$_}, 0) foreach keys %hit;
-    }
-    return ($failed, map {[ $_, $hit{$_} ]} sort { $a <=> $b } keys %hit);
+    return ($failed, values %hit);
 }
 
 sub scan_params {
     return (4096, 10000);
-}
-
-# An extended rot13-alike, hoping to reduce self-match hits.
-# This wouldn't be needed if searcher ran outside searchee.
-sub obscure { # selfsearch
-    my ($txtref, $hide) = @_;
-    $$txtref =~ tr/\x00-\x7f\x80-\xff/\x80-\xff\x00-\x7f/;
-    return ();
 }
 
 
@@ -201,7 +187,8 @@ It is not implemented.
 =head2 Searching from inside, via filehandles
 
 While the process searches its own memory space, it may see duplicates
-of some regions.  It may also see hits due to the regexps used.
+of some regions.  It may also see hits on the regexps used, so try to
+avoid that.
 
 Under Linux at least, it is the easiest to do...
 
@@ -231,6 +218,12 @@ contents is very likely to cause extra hits to show up.  Asserting
 that there be "only one" hit is fragile.
 
 XXX: More selective pattern capturing may mitigate this.
+
+=item * During selfsearch, memory for hits is allocated in the process
+memory space, but the memory map is not re-read.
+
+=item * The "address" of the hit is not covered in the test suite, so
+may be off.
 
 =back
 

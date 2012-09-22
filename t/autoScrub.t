@@ -96,7 +96,7 @@ sub vape_tt {
     $o->rot13;
     my ($fail, @hit) = Devel::MemScan->scan(qr{~~0# \w{4}-\w{8} #~~});
     is(undef, $fail, 'Devel::MemScan 0');
-    my @htxt = map { $_->[1] } @hit; # deref
+    my @htxt = map { $_->txt } @hit;
     ok(scalar (grep { qr{zvss-zhssrerq} } @htxt), 'sbhaq bevt')
       or diagdump(hit => \@hit, o => $o);
 

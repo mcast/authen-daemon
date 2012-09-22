@@ -12,7 +12,7 @@ use DiagDump 'diagdump';
 our $junk;
 
 sub main {
-    my $tot = 25;
+    my $tot = 27;
     plan tests => $tot;
   SKIP: {
         basic_tt() or
@@ -40,6 +40,9 @@ sub basic_tt {
     $junk = 'bifflefrogulation';
     my ($fail, @hit) = Devel::MemScan->scan(qr{bifflefrogulation});
     is($fail, undef, 'scan A: should not fail');
+    like(eval { $hit[0]->hexaddr } || $@, qr{^0x[0-9a-fA-F]+$}, 'scan A: hexaddr');
+    is(eval { hex($hit[0]->hexaddr) } || $@,
+       eval { $hit[0]->addr } || 'well, it broke', 'scan A: hex equiv');
     return cmp_ok(scalar @hit, '>', 0, 'scan A: want hits');
 }
 
@@ -49,8 +52,7 @@ sub context_tt {
       (qr{[a-z]+MATCH_IT_HERE[a-z]+}); # likely to be slow?
     is($fail, undef, 'scan B: should not fail');
     my @has_context = grep { /wibbly/ && /wobbly/ }
-      map { $_->[1] } # deref: liable to change
-        @hit;
+      map { $_->txt } @hit;
     cmp_ok(scalar @has_context, '>', 0, 'scan B: includes context')
       or diagdump(hit => @hit);
     return ();
@@ -61,12 +63,12 @@ sub patternhit_tt {
     # assumption: regex compiler simplifies the [f] to just f
     # and the pattern will then match that representation
     my ($fail, @hit) = Devel::MemScan->scan($pat);
-    die "pathit1 fail: $fail" if defined $fail;
+    die "pathit1 fail: $fail" if $fail;
     cmp_ok(scalar @hit, '>', 0, 'pathit1: expect regex match');
 
     $pat = qr{another_reg(exp|ular_expression)_doesnt_match};
     ($fail, @hit) = Devel::MemScan->scan($pat);
-    die "pathit2 fail: $fail" if defined $fail;
+    die "pathit2 fail: $fail" if $fail;
     cmp_ok(scalar @hit, '==', 0, 'pathit2: expect no match')
       or diagdump(hit => @hit);
 }
@@ -86,13 +88,13 @@ sub unihit_tt {
     substr($junk, 0, 4, 'ABCD');
     my ($fail, @hit) = Devel::MemScan->scan
       (qr{ABCDgold\w+ \($arg\)MA\w+ \w{3} \w+.{0,10}});
-    die "D:$fail" if defined $fail;
+    die "D:$fail" if $fail;
     my $jref = \$junk;
     cmp_ok(scalar @hit, '>', 0, "scan D($arg): should hit");
     cmp_ok(scalar @hit, '<=', 3, 'scan D($arg): expect 1..3 hits')
       or diagdump
         (jref => "$jref",
-         hit_hexaddr => [ map { sprintf('0x%x', $_->[0]) } @hit ], # deref
+         hit_hexaddr => [ map { $_->hexaddr } @hit ],
          hit => \@hit);
   TODO: {
         local $TODO = 'tricky?';
@@ -110,16 +112,16 @@ sub wipeout_tt {
     my $pat = qr{...[h]ef+${arg}a\x6cum(?:ock)?\w+};
 
     if ($arg) {
-        ($fail, @hit1) = Devel::MemScan->scan($pat, 1);
+        ($fail, @hit1) = Devel::MemScan->scan($pat);
         $fail ||= 'not found' unless @hit1;
-        die "find1($arg) fail ($fail)" if defined $fail;
+        die "find1($arg) fail ($fail)" if $fail;
         scrub(\$_->[1]) foreach @hit1; # deref
     }
 
     scrub(\$junk[0]);
 
     ($fail, @hit2) = Devel::MemScan->scan($pat);
-    die "find2($arg) fail ($fail)" if defined $fail;
+    die "find2($arg) fail ($fail)" if $fail;
 
     is(scalar @hit2, 0, "wipeout($arg): gone after scrub")
       or diagdump(hit1 => \@hit1, hit2 => \@hit2, junk => \@junk);
