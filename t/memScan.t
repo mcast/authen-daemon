@@ -12,12 +12,13 @@ use DiagDump 'diagdump';
 our $junk;
 
 sub main {
-    my $tot = 36;
+    my $tot = 38;
     plan tests => $tot;
   SKIP: {
         basic_tt() # 4
           or skip 'no hits in basic test - completely broken?', $tot - 4;
 
+        token_tt(); # 2
         repeat_tt(); # 6
         context_tt(); # 2
         patternhit_tt(); # 2
@@ -42,6 +43,13 @@ sub basic_tt {
     is(eval { hex($hit[0]->hexaddr) } || $@,
        eval { $hit[0]->addr } || 'well, it broke', 'scan A: hex equiv');
     return cmp_ok(scalar @hit, '>', 0, 'scan A: want hits');
+}
+
+sub token_tt {
+    my @t = map { Devel::MemScan->token($_) } (3, 5, undef, 8);
+    my @len = map { length($_) } @t;
+    is("@len", '3 5 8 8', 'token len');
+    isnt($t[2], $t[3], 'token diff');
 }
 
 sub repeat_tt {

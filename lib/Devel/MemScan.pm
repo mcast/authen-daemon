@@ -148,6 +148,28 @@ sub scan {
 }
 
 
+=head2 token($len)
+
+Returns a randomly generated alphabetic string of the form
+C<LabCDefJ>.  C<$len> defaults to 8 and must be more than 2.
+
+This is intended to assist the marking of match regions, to reduce the
+possibility of hits on "dirty" memory left over from a previous run of
+the same program.
+
+It is provided to help where the OS fails to scrub memory before
+re-use in a new process, and for superstition in those where it does.
+
+=cut
+
+sub token {
+    my ($called, $len) = @_;
+    $len ||= 8;
+    my @set = ('A' .. 'Z', 'a' .. 'z');
+    my @chr = map { $set[int(rand(52)) ] } (3 .. $len);
+    return join '', 'L', @chr, 'J';
+}
+
 
 sub hitclass { # for override
     return 'Devel::MemScan::Hit';
