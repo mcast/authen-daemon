@@ -12,7 +12,7 @@ use DiagDump 'diagdump';
 our $junk;
 
 sub main {
-    my $tot = 33;
+    my $tot = 36;
     plan tests => $tot;
   SKIP: {
         basic_tt() # 4
@@ -21,6 +21,7 @@ sub main {
         repeat_tt(); # 6
         context_tt(); # 2
         patternhit_tt(); # 2
+        long_tt(); # 3
         mkregex_tt(); # 2
 
         unihit_tt($_) for (0..4); # 3 * 5
@@ -82,6 +83,23 @@ sub repeat_tt {
         local $TODO = 'tricky?';
         is($#n, 1, 'repeat: max nhit');
     }
+}
+
+sub long_tt { # find matches of buflen at any offset
+    my ($buflen) = Devel::MemScan->scan_params;
+    my $matchlen = $buflen;
+    my $offset = int(rand($buflen*2));
+    $junk = 'o' x ($buflen*4);
+    my @tok = qw( iwaeZ3na naeth2Hu );
+    substr($junk, $offset, 8) = $tok[0];
+    substr($junk, $offset+$matchlen-8, 8) = $tok[1];
+
+    my ($fail, @hit) = Devel::MemScan->scan(qr{$tok[0]o+$tok[1]});
+    is($fail, undef, 'long: pass');
+    cmp_ok(scalar @hit, '>', 0, 'long: hit');
+    my @len = map { length($_->txt) } @hit;
+    ok((scalar grep { $_ == $matchlen } @len), 'long: hitlen')
+      or diagdump(len => \@len, offset => $offset);
 }
 
 sub context_tt {
