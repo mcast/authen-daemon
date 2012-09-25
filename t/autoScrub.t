@@ -94,7 +94,7 @@ sub vape_tt {
     my $o = Authen::Daemon::AutoScrub->new([ $orig ]);
     substr($$o[0], 2, 1, '0');
     $o->rot13;
-    my ($fail, @hit) = Devel::MemScan->scan(qr{~~0# \w{4}-\w{8} #~~});
+    my ($fail, @hit) = Devel::MemScan->scan(qr{~~0#( \w{4}-\w{8} )#~~});
     is(undef, $fail, 'Devel::MemScan 0');
     my @htxt = map { $_->txt } @hit;
     ok(scalar (grep { qr{zvss-zhssrerq} } @htxt), 'sbhaq bevt')

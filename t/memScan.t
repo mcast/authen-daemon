@@ -28,10 +28,7 @@ sub main {
         # repeat because it seems intermittent (on what conditions?);
         # but it also seems consistent within a Perl instance
 
-      TODO: {
-            local $TODO = 'tricky?';
-            wipeout_tt(1); # 1
-        }
+        wipeout_tt(1); # 1
         wipeout_tt(0); # 1
     }
     return ();
@@ -60,15 +57,14 @@ sub repeat_tt {
     }
 
     # knock them down
-    my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+\d+ });
+    my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+(\d+) });
     is($fail, undef, 'repeat: pass');
     cmp_ok(scalar @hit, '>=', $N, 'repeat: enough');
 
     # keep score
     my @nhit = (0) x $N; # idx = i, value = hitcount
     foreach my $h (@hit) {
-        next unless $h->txt =~ m{$tok\+(\d+) };
-        $nhit[$1]++;
+        $nhit[ $h->txt ]++;
     }
     my @n = ([]); # idx = hitcount, value = \@i
     for (my $i=0; $i<@nhit; $i++) {
@@ -79,10 +75,7 @@ sub repeat_tt {
     is_deeply($n[0], [], 'repeat: missing') or $ok=0;
     is(scalar @nhit, $N, 'repeat: extras')  or $ok=0;
 #     diagdump(hit => \@hit, nhit => \@nhit, n => \@n) unless $ok; # big noise
-  TODO: {
-        local $TODO = 'tricky?';
-        is($#n, 1, 'repeat: max nhit');
-    }
+    is($#n, 1, 'repeat: max nhit');
 }
 
 sub long_tt { # find matches of buflen at any offset
@@ -94,7 +87,7 @@ sub long_tt { # find matches of buflen at any offset
     substr($junk, $offset, 8) = $tok[0];
     substr($junk, $offset+$matchlen-8, 8) = $tok[1];
 
-    my ($fail, @hit) = Devel::MemScan->scan(qr{$tok[0]o+$tok[1]});
+    my ($fail, @hit) = Devel::MemScan->scan(qr{($tok[0]o+$tok[1])});
     is($fail, undef, 'long: pass');
     cmp_ok(scalar @hit, '>', 0, 'long: hit');
     my @len = map { length($_->txt) } @hit;
@@ -105,10 +98,11 @@ sub long_tt { # find matches of buflen at any offset
 sub context_tt {
     $junk = 'wibblywibblyMATCH_IT_HEREwobblywobbly';
     my ($fail, @hit) = Devel::MemScan->scan
-      (qr{[a-z]+MATCH_IT_HERE[a-z]+}); # likely to be slow?
+      (qr{([a-z]+)MATCH_IT_HERE([a-z]+)}); # likely to be slow?
     is($fail, undef, 'scan B: should not fail');
-    my @has_context = grep { /wibbly/ && /wobbly/ }
-      map { $_->txt } @hit;
+    my @has_context = grep {
+        $_->txt(0) =~ /wibbly/ && $_->txt(1) =~ /wobbly/
+    } @hit;
     cmp_ok(scalar @has_context, '>', 0, 'scan B: includes context')
       or diagdump(hit => @hit);
     return ();
@@ -152,10 +146,7 @@ sub unihit_tt {
         (jref => "$jref",
          hit_hexaddr => [ map { $_->hexaddr } @hit ],
          hit => \@hit);
-  TODO: {
-        local $TODO = 'tricky?';
-        cmp_ok(scalar @hit, '==', 1, 'scan D($arg): want one hit - mystery variability');
-    }
+    cmp_ok(scalar @hit, '==', 1, 'scan D($arg): want one hit');
 }
 
 sub wipeout_tt {
@@ -171,7 +162,6 @@ sub wipeout_tt {
         ($fail, @hit1) = Devel::MemScan->scan($pat);
         $fail ||= 'not found' unless @hit1;
         die "find1($arg) fail ($fail)" if $fail;
-        scrub(\$_->[1]) foreach @hit1; # deref
     }
 
     scrub(\$junk[0]);

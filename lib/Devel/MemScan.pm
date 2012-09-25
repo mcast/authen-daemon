@@ -59,7 +59,10 @@ This allows the creation of the regexp to be postponed, possibly into
 a child process where it won't cause false positives.
 (Implemented but not so useful just yet.)
 
-Returns C<($failed, @hit)>.
+Returns C<($failed, @hit)>.  Text elements in the hits are the capture
+groups C<($1 .. $9)>, truncating the tail of undefined ones.  Hits
+matching without captures should be less likely to cause duplicates
+further down memory.
 
 C<$failed> is C<undef> for success, otherwise it is a (guaranteed
 true) text describing the problem.  The method dies only for want of
@@ -72,6 +75,7 @@ particular order.
 
 sub scan {
     my ($called, $pat) = @_;
+    my $hitclass = $called->hitclass;
     my $scan_pid = $$;
 
     die "expected wantarray" unless wantarray;
@@ -123,9 +127,11 @@ sub scan {
                       "\x00" x ($bufflen-$readlen);
                 }
 
-                while ($buff =~ m{($pat)}g) {
-                    my $mpos = $bpos +(pos($buff) -length($1) -$bufflen);
-                    $hit{$mpos} = Devel::MemScan::Hit->new([ $mpos, $1 ]);
+                while ($buff =~ m{$pat}g) {
+                    my $mpos = $bpos +(pos($buff) -$bufflen);
+                    # $mpos -= length($whole_match) # we don't have it!
+                    $hit{$mpos} = $hitclass->new
+                      ([ $mpos, $1, $2, $3, $4, $5, $6, $7, $8, $9 ]);
                     # hash overwrite allows for a more complete hit on
                     # second bufferful; assumes a left-anchored regex
                     die "Abort - too many hits" if keys %hit > $maxhit;
@@ -141,7 +147,13 @@ sub scan {
     return ($failed, values %hit);
 }
 
-sub scan_params {
+
+
+sub hitclass { # for override
+    return 'Devel::MemScan::Hit';
+}
+
+sub scan_params { # for override
     return (4096, 10000);
 }
 
@@ -221,6 +233,10 @@ XXX: More selective pattern capturing may mitigate this.
 
 =item * During selfsearch, memory for hits is allocated in the process
 memory space, but the memory map is not re-read.
+
+This effect might be reduced if we assume memory is appended to the
+address space, and work backwards through the memory map...  but I
+hope to avoid this sort of futzing.
 
 =item * The "address" of the hit is not covered in the test suite, so
 may be off.
