@@ -267,6 +267,8 @@ may be off.
 variable could reasonably be expected to show repeat matches on the
 buffer for that, in addition to all the other problems C<$&> causes.
 
+=item * This is untested with wide characters.
+
 =back
 
 
