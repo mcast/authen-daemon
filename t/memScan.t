@@ -15,23 +15,22 @@ sub main {
     my $tot = 27;
     plan tests => $tot;
   SKIP: {
-        basic_tt() or
-          skip 'no hits in basic test - completely broken?', $tot - 2;
+        basic_tt() # 4
+          or skip 'no hits in basic test - completely broken?', $tot - 4;
 
-        context_tt();
-        patternhit_tt();
-        mkregex_tt() or
-          skip 'regex maker b0rk', $tot - 4;
+        context_tt(); # 2
+        patternhit_tt(); # 2
+        mkregex_tt(); # 2
 
-        unihit_tt($_) for (0..4);
+        unihit_tt($_) for (0..4); # 3 * 5
         # repeat because it seems intermittent (on what conditions?);
         # but it also seems consistent within a Perl instance
 
       TODO: {
             local $TODO = 'tricky?';
-            wipeout_tt(1);
+            wipeout_tt(1); # 1
         }
-        wipeout_tt(0);
+        wipeout_tt(0); # 1
     }
     return ();
 }

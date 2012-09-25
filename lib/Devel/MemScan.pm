@@ -225,6 +225,10 @@ memory space, but the memory map is not re-read.
 =item * The "address" of the hit is not covered in the test suite, so
 may be off.
 
+=item * During selfsearch, programs using the L<perlvar/$&> capture
+variable could reasonably be expected to show repeat matches on the
+buffer for that, in addition to all the other problems C<$&> causes.
+
 =back
 
 
