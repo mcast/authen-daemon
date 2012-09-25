@@ -53,7 +53,7 @@ sub token_tt {
 }
 
 sub repeat_tt {
-    my $tok = 'Aec1Mie2'; # 8
+    my $tok = Devel::MemScan->token(8);
     my $N = 4096; # headroom below 10000
     cmp_ok($N, '<=', (Devel::MemScan->scan_params)[1], 'repeat: within params');
 
@@ -91,7 +91,7 @@ sub long_tt { # find matches of buflen at any offset
     my $matchlen = $buflen;
     my $offset = int(rand($buflen*2));
     $junk = 'o' x ($buflen*4);
-    my @tok = qw( iwaeZ3na naeth2Hu );
+    my @tok = map { Devel::MemScan->token(8) } (0, 1);
     substr($junk, $offset, 8) = $tok[0];
     substr($junk, $offset+$matchlen-8, 8) = $tok[1];
 
