@@ -12,12 +12,13 @@ use DiagDump 'diagdump';
 our $junk;
 
 sub main {
-    my $tot = 27;
+    my $tot = 33;
     plan tests => $tot;
   SKIP: {
         basic_tt() # 4
           or skip 'no hits in basic test - completely broken?', $tot - 4;
 
+        repeat_tt(); # 6
         context_tt(); # 2
         patternhit_tt(); # 2
         mkregex_tt(); # 2
@@ -43,6 +44,44 @@ sub basic_tt {
     is(eval { hex($hit[0]->hexaddr) } || $@,
        eval { $hit[0]->addr } || 'well, it broke', 'scan A: hex equiv');
     return cmp_ok(scalar @hit, '>', 0, 'scan A: want hits');
+}
+
+sub repeat_tt {
+    my $tok = 'Aec1Mie2'; # 8
+    my $N = 4096; # headroom below 10000
+    cmp_ok($N, '<=', (Devel::MemScan->scan_params)[1], 'repeat: within params');
+
+    # set them up
+    $junk = 'o' x ($N * 16); # assumption: contiguous string storage!
+    for (my $i=0; $i<$N; $i++) {
+        substr($junk, $i*16,     16) = " $tok+.... -";
+        substr($junk, $i*16 + 10, 4) = sprintf('%04d', $i);
+    }
+
+    # knock them down
+    my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+\d+ });
+    is($fail, undef, 'repeat: pass');
+    cmp_ok(scalar @hit, '>=', $N, 'repeat: enough');
+
+    # keep score
+    my @nhit = (0) x $N; # idx = i, value = hitcount
+    foreach my $h (@hit) {
+        next unless $h->txt =~ m{$tok\+(\d+) };
+        $nhit[$1]++;
+    }
+    my @n = ([]); # idx = hitcount, value = \@i
+    for (my $i=0; $i<@nhit; $i++) {
+        my $hitcount = $nhit[$i];
+        push @{ $n[$hitcount] }, $i;
+    }
+    my $ok = 1;
+    is_deeply($n[0], [], 'repeat: missing') or $ok=0;
+    is(scalar @nhit, $N, 'repeat: extras')  or $ok=0;
+#     diagdump(hit => \@hit, nhit => \@nhit, n => \@n) unless $ok; # big noise
+  TODO: {
+        local $TODO = 'tricky?';
+        is($#n, 1, 'repeat: max nhit');
+    }
 }
 
 sub context_tt {
