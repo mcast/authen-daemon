@@ -171,6 +171,23 @@ sub token {
 }
 
 
+=head2 dumpable(@hit)
+
+Class method, for convenience in reporting.  Calls
+L<Devel::MemScan::Hit/dumpable> for each object.
+
+Returns a listref of the resulting outputs (which are also listrefs).
+For clarity, returns C<'dumpable_no_hits'> when called on nothing.
+
+=cut
+
+sub dumpable {
+    my ($called, @hit) = @_;
+    return 'dumpable_no_hits' unless @hit;
+    return [ map { $_->dumpable } @hit ];
+}
+
+
 sub hitclass { # for override
     return 'Devel::MemScan::Hit';
 }

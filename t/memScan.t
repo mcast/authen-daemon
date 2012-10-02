@@ -12,15 +12,15 @@ use DiagDump 'diagdump';
 our $junk;
 
 sub main {
-    my $tot = 38;
+    my $tot = 41;
     plan tests => $tot;
   SKIP: {
         basic_tt() # 4
           or skip 'no hits in basic test - completely broken?', $tot - 4;
 
         token_tt(); # 2
-        repeat_tt(); # 6
-        context_tt(); # 2
+        repeat_tt(); # 7
+        context_tt(); # 4
         patternhit_tt(); # 2
         long_tt(); # 3
         mkregex_tt(); # 2
@@ -42,6 +42,7 @@ sub basic_tt {
     like(eval { $hit[0]->hexaddr } || $@, qr{^0x[0-9a-fA-F]+$}, 'scan A: hexaddr');
     is(eval { hex($hit[0]->hexaddr) } || $@,
        eval { $hit[0]->addr } || 'well, it broke', 'scan A: hex equiv');
+
     return cmp_ok(scalar @hit, '>', 0, 'scan A: want hits');
 }
 
@@ -68,6 +69,7 @@ sub repeat_tt {
     my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+(\d+) });
     is($fail, undef, 'repeat: pass');
     cmp_ok(scalar @hit, '>=', $N, 'repeat: enough');
+    is(length($junk), $N * 16, 'repeat: junklen');
 
     # keep score
     my @nhit = (0) x $N; # idx = i, value = hitcount
@@ -113,6 +115,14 @@ sub context_tt {
     } @hit;
     cmp_ok(scalar @has_context, '>', 0, 'scan B: includes context')
       or diagdump(hit => @hit);
+
+    # debug dump of hits
+    my $dwant = eval { [ $hit[0]->hexaddr, $hit[0]->txt ] } || 'b0rk';
+    is_deeply(eval { $hit[0]->dumpable } || $@,
+              $dwant, 'dumpable');
+    is_deeply(eval { Devel::MemScan->dumpable($hit[0], $hit[0]) } || $@,
+              [ $dwant, $dwant ], 'dumpable(@)');
+
     return ();
 }
 
@@ -149,12 +159,12 @@ sub unihit_tt {
     die "D:$fail" if $fail;
     my $jref = \$junk;
     cmp_ok(scalar @hit, '>', 0, "scan D($arg): should hit");
-    cmp_ok(scalar @hit, '<=', 3, 'scan D($arg): expect 1..3 hits')
+    cmp_ok(scalar @hit, '<=', 3, "scan D($arg): expect 1..3 hits")
       or diagdump
         (jref => "$jref",
          hit_hexaddr => [ map { $_->hexaddr } @hit ],
          hit => \@hit);
-    cmp_ok(scalar @hit, '==', 1, 'scan D($arg): want one hit');
+    cmp_ok(scalar @hit, '==', 1, "scan D($arg): want one hit");
 }
 
 sub wipeout_tt {

@@ -100,6 +100,20 @@ sub txt {
            : join '', map { defined $_ ? $_ : '' } @txt);
 }
 
+
+=head2 dumpable()
+
+Object method.  Return a listref of C<(hexaddr, txt)> suitable for
+sending to a data dumper.
+
+=cut
+
+sub dumpable {
+    my ($self) = @_;
+    return [ $self->hexaddr, $self->txt ];
+}
+
+
 # An extended rot13-alike, hoping to reduce self-match hits.
 # This wouldn't be needed if searcher ran outside searchee.
 sub __obscure { # selfsearch
