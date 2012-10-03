@@ -85,7 +85,47 @@ sub repeat_tt {
     is_deeply($n[0], [], 'repeat: missing') or $ok=0;
     is(scalar @nhit, $N, 'repeat: extras')  or $ok=0;
 #     diagdump(hit => \@hit, nhit => \@nhit, n => \@n) unless $ok; # big noise
-    is($#n, 1, 'repeat: max nhit');
+
+
+    my (%h, %info);
+
+    # attempt to test addr
+    my $guess_base;
+  SKIP: {
+        my @oner = @{ $n[1] };
+        cmp_ok(scalar @oner, '>', 9, 'repeat: representative sample of unihits')
+          or skip 1, 'addr tests need some unihits';
+
+        @h{@oner} = (1) x @oner;
+        my @oner_hit = grep { $h{$_->txt} } @hit;
+        $guess_base = $oner_hit[0]->addr - 16 * $oner_hit[0]->txt;
+        %info = (guess_base => $guess_base,
+                 guess_from => $oner_hit[0]->dumpable);
+        my $maxabs = 0;
+        my @offs = map {
+            my $i = $_->txt;
+            my $want = $info{guess_base} + 16 * $i;
+            my $got  = $_->addr;
+            my $abs = abs($got - $want);
+            $maxabs = $abs if $abs > $maxabs;
+            +{ $i, $got - $want };
+        } @oner_hit;
+        is($maxabs, 0, 'repeat: max abs (addr offset) of oners')
+          or diagdump(%info);
+    }
+
+    # often find 3x hits, no idea how
+    # "extra" ones are 4 - 6 kB after
+    my @maxxer = @{ $n[$#n] };
+    @h{@maxxer} = (1) x @maxxer;
+    my @maxxed_hit = grep { $h{$_->txt} } @hit;
+    %info = ("maxxers = n[$#n]" => \@maxxer,
+             maxxers => [ scalar @maxxer, 16 * @maxxer ],
+             maxxed_hit => Devel::MemScan->
+             dumpable(@maxxed_hit,
+                      sub { +{ offset => ($_[0]->addr - 16 * $_[0]->txt) - $guess_base } },
+                     ));
+    is($#n, 1, 'repeat: max nhit') or diagdump(%info);
 }
 
 sub long_tt { # find matches of buflen at any offset
