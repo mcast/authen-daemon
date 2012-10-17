@@ -12,7 +12,7 @@ use DiagDump 'diagdump';
 our $junk;
 
 sub main {
-    my $tot = 42;
+    my $tot = 46;
     plan tests => $tot;
   SKIP: {
         basic_tt() # 4
@@ -20,6 +20,7 @@ sub main {
 
         token_tt(); # 2
         repeat_tt(); # 8
+        repeat_nocap_tt(); # 4
         context_tt(); # 4
         patternhit_tt(); # 2
         long_tt(); # 3
@@ -54,16 +55,8 @@ sub token_tt {
 }
 
 sub repeat_tt {
-    my $tok = Devel::MemScan->token(8);
     my $N = 4096; # headroom below 10000
-    cmp_ok($N, '<=', (Devel::MemScan->scan_params)[1], 'repeat: within params');
-
-    # set them up
-    $junk = 'o' x ($N * 16); # assumption: contiguous string storage!
-    for (my $i=0; $i<$N; $i++) {
-        substr($junk, $i*16,     16) = " $tok+.... -";
-        substr($junk, $i*16 + 10, 4) = sprintf('%04d', $i);
-    }
+    my $tok = repeat_setup($N);
 
     # knock them down
     my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+(\d+) });
@@ -159,6 +152,37 @@ sub __rangify {
          ? "$$e[0](1)"
          : sprintf('%s..%s(%d)', $$e[0], $$e[1], $$e[1] - $$e[0] +1));
     } @o;
+}
+
+sub repeat_setup { # 1
+    my ($N) = @_;
+
+    my $tok = Devel::MemScan->token(8);
+    cmp_ok($N, '<=', (Devel::MemScan->scan_params)[1], 'repeat_setup within params');
+
+    # set them up
+    $junk = 'o' x ($N * 16); # assumption: contiguous string storage!
+    for (my $i=0; $i<$N; $i++) {
+        substr($junk, $i*16,     16) = " $tok+.... -";
+        substr($junk, $i*16 + 10, 4) = sprintf('%04d', $i);
+    }
+
+    return $tok;
+}
+
+
+# like repeat_tt but without the capture,
+# which rather limits diagnostics,
+# but should make unihit easier
+sub repeat_nocap_tt {
+    my $N = 4096; # headroom below 10000
+    my $tok = repeat_setup($N);
+
+    # knock them down
+    my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+\d+ });
+    is($fail, undef, 'repeat_nocap: pass');
+    cmp_ok(scalar @hit, '>=', $N, 'repeat_nocap: enough');
+    cmp_ok(scalar @hit, '=', $N, 'repeat_nocap: not too many');
 }
 
 
