@@ -21,7 +21,7 @@ in the source.
  my $pwstash = Authen::Daemon::PassStash->new($do_connect, user => 'scotty');
  
  # Insert password when you can.  It won't leak out.
- $pwstash->set('beammeup');
+ $pwstash->set([ 'beammeup' ]);
  
  # Later, as necessary
  my $conn = eval { $pwstash->utilise() };
