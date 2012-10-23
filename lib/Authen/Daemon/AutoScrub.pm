@@ -25,6 +25,12 @@ This tool is intended to help other code not litter memory with copies
 of a password.  There are some tests to see whether it is effective,
 but it does seem to be a tricky thing to do.
 
+=head2 Why no accessor?
+
+The entire point of this class is to ensure that temporary values
+passed around are not abandoned in unused memory.  Perhaps there are
+other ways, but this seems to require direct arrayref access.
+
 
 =head1 METHODS
 
