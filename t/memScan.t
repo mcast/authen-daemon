@@ -12,7 +12,7 @@ use DiagDump 'diagdump';
 our $junk;
 
 sub main {
-    my $tot = 46;
+    my $tot = 47;
     plan tests => $tot;
   SKIP: {
         basic_tt() # 4
@@ -20,7 +20,7 @@ sub main {
 
         token_tt(); # 2
         repeat_tt(); # 8
-        repeat_nocap_tt(); # 4
+        repeat_nocap_tt(); # 5
         context_tt(); # 4
         patternhit_tt(); # 2
         long_tt(); # 3
@@ -179,10 +179,13 @@ sub repeat_nocap_tt {
     my $tok = repeat_setup($N);
 
     # knock them down
-    my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+\d+ });
-    is($fail, undef, 'repeat_nocap: pass');
-    cmp_ok(scalar @hit, '>=', $N, 'repeat_nocap: enough');
-    cmp_ok(scalar @hit, '=', $N, 'repeat_nocap: not too many');
+    my $anyfail;
+    foreach my $i (0..2) {
+        my ($fail, @hit) = Devel::MemScan->scan(qr{ $tok\+\d+ });
+        $anyfail ||= $fail;
+        cmp_ok(scalar @hit, '=', $N, 'repeat_nocap[$i]: one each');
+    }
+    is($anyfail, undef, 'repeat_nocap: pass');
 }
 
 

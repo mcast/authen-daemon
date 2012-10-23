@@ -31,7 +31,7 @@ sub search_tt {
     $junk .= 'ton';
     my ($fail, @hit) = Devel::MemScan->scan(qr{smork(?:ing|le)ton});
     is($fail, undef, 'does search work?');
-    cmp_ok(scalar @hit, '>=', 1, 'does it find?');
+    cmp_ok(scalar @hit, '=', 1, 'does it find?');
 }
 
 sub fails_tt {
@@ -64,8 +64,10 @@ sub plain_tt {
 
     my ($fail, @hit) = Devel::MemScan->scan(qr{hieK\d\whg\shi6Paey5});
     die "plain: search fail: $fail" if $fail;
-    cmp_ok(scalar @hit, '<=', 1, 'plain: no more than one copy')
+    cmp_ok(scalar @hit, '=', 1, 'plain: one copy')
       or diagdump(hit => \@hit);
+    # keeping it scrambled and/or in kernel store would be neat, but
+    # would also invalidate following test assumptions
 
     my $got2 = $pw->utilise(qw( list here )); # 1 test
     is($got2, 'eb9a196e8ffb84b1ad0d6a034771ecaf', 'scalar return');
