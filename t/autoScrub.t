@@ -10,11 +10,12 @@ use lib 't/tlib';
 use DiagDump 'diagdump';
 
 sub main {
-    plan tests => 26;
+    plan tests => 31;
 
     interface_tt(); #  9
     rots_tt();      # 10
     vape_tt();      #  7
+    accessors_tt(); #  5
 
     return ();
 }
@@ -123,5 +124,73 @@ sub vape_tt {
     return ();
 }
 
+
+# The autoscrub concept seems to work OK with direct access.
+# Try it with accessors.
+sub accessors_tt {
+    my $a = Authen::Daemon::AutoScrub->new;
+    my $p;
+
+    my $init = sub {
+        my $t = Devel::MemScan->token(12);
+
+        $a->[0] = '==............==';
+        substr($a->[0], 2, 12) = $t;
+
+        # make regexp without causing self-hit
+        $p = $t;
+        die "Token assumptions broken" unless
+          ($p =~ s{^\w{2}}{==\\j{2}} &&
+           $p =~ s{\w{2}$}{\\j{2}==}); # rot13(j) = w
+        Authen::Daemon::AutoScrub->rot13(\$p);
+        $p = qr{$p};
+        return ();
+    };
+
+    my %addr; # key = hexaddr, value = hit history bitfield
+    my $count = sub {
+        my ($fail, @hit) = Devel::MemScan->scan($p);
+        die "Devel::MemScan $fail" if $fail;
+        foreach my $h (keys %addr) { $addr{$h} *= 2 }
+
+#        foreach my $h (@hit) { $addr{ $h->hexaddr } |= 1 }
+        my $x = 1;
+#
+# Commenting out BOTH the lines above causes 2 or 3 != 1 failures
+# marked below, ~10% of test runs.  Something being optimised away?
+# Temporary storage area being overwritten?  B::Deparse shows no
+# obvious difference.
+
+        return scalar @hit;
+    };
+
+    $init->();
+    is($count->(), 0, 'accessors: not yet');
+    $a->rot13;
+    is($count->(), 1, 'accessors: vis') # can fail
+      or diagdump({ addr => \%addr });
+    $a->rot13;
+    is($count->(), 0, 'accessors: hide');
+
+    $a->rot13;
+    my $get = ($a->getter);
+    $a->rot13;
+    is($count->(), 1, 'accessors: copy left out') # can fail
+      or diagdump({ addr => \%addr });
+    substr($get, 0, 10, 'x' x 10);
+    is($count->(), 0, 'accessors: copy gone');
+    diagdump({ addr => \%addr }) if %addr;
+}
+
+# monkeypatch accessors
+sub Authen::Daemon::AutoScrub::getter {
+    my ($self) = @_;
+    return $self->[0];
+}
+#sub Authen::Daemon::AutoScrub::setter {
+#    my ($self, $newval) = @_;
+#    $self->[0] = $newval;
+#    return ();
+#}
 
 main();
