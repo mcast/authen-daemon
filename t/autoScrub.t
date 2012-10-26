@@ -10,12 +10,12 @@ use lib 't/tlib';
 use DiagDump 'diagdump';
 
 sub main {
-    plan tests => 31;
+    plan tests => 33;
 
     interface_tt(); #  9
     rots_tt();      # 10
     vape_tt();      #  7
-    accessors_tt(); #  5
+    accessors_tt(); #  7
 
     return ();
 }
@@ -180,17 +180,29 @@ sub accessors_tt {
     substr($get, 0, 10, 'x' x 10);
     is($count->(), 0, 'accessors: copy gone');
     diagdump({ addr => \%addr }) if %addr;
+
+
+    $init->();
+    my $b = Authen::Daemon::AutoScrub->new;
+    $a->rot13();
+    $b->setter( $a->[0] );
+    is($count->(), 2, 'accessor: no tmp during set');
+    $a->scrub;
+    $b->setter('something else');
+    is($count->(), 0, 'accessor: oldval gone');
 }
 
 # monkeypatch accessors
+use Carp;
 sub Authen::Daemon::AutoScrub::getter {
     my ($self) = @_;
     return $self->[0];
 }
-#sub Authen::Daemon::AutoScrub::setter {
-#    my ($self, $newval) = @_;
-#    $self->[0] = $newval;
-#    return ();
-#}
+sub Authen::Daemon::AutoScrub::setter {
+    my $self = shift;
+    croak "Need a value" unless 1 == @_;
+    $self->[0] = shift;
+    return ();
+}
 
 main();
