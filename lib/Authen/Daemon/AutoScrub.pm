@@ -1,6 +1,7 @@
 package Authen::Daemon::AutoScrub;
 use strict;
 use warnings;
+use Carp;
 
 =head1 NAME
 
@@ -11,25 +12,68 @@ Authen::Daemon::AutoScrub - temporary storage for a sensitive string
  use Authen::Daemon::AutoScrub;
  my $P1 = Authen::Daemon::AutoScrub->new();
  my $P2 = Authen::Daemon::AutoScrub->new([ 'sekrit' ]);
- $P1->[0] = $P2->[0]; # copy contents
+ $$P1[0] = $$P2[0]; # copy contents
  undef $P2; # one copy left
  undef $P1; # secret is forgotten (hopefully)
 
 =head1 DESCRIPTION
 
-This class makes objects C<$obj> which are to be de-referenced as
-C<$obj->[0]> for reading or writing.  It scrubs that first element
-clean when the reference is DESTROYed.
+This class makes objects C<$obj> which contain one scalar which is to
+be scrubbed clean when C<$obj> is C<DESTROY>ed.
 
-This tool is intended to help other code not litter memory with copies
-of a password.  There are some tests to see whether it is effective,
-but it does seem to be a tricky thing to do.
+It is intended to help other code not litter memory with copies of a
+password.  There are some tests to see whether it is effective, but it
+does seem to be a tricky thing to do.
 
-=head2 Why no accessor?
+
+=head1 ACCESSORS
+
+It is unclear whether these accessors are as safe, in the sense of not
+creating copies of data transferred, as direct access.  For this
+reason I recommend not using them yet.
+
+=head2 get()
+
+Returns a copy of the contents as a scalar.
+
+=head2 set($value)
+
+Set C<$value> into the object.  Caller is responsible for ensuring the
+input is not left around.
+
+=cut
+
+sub get {
+    my ($self) = @_;
+    return $$self[0];
+}
+sub get_ { $_[0]->[0] }
+sub set { $_[0]->[0] = $_[1] }
+
+sub set_ {
+    my $self = shift;
+    croak "Need one value" unless 1 == @_;
+    $$self[0] = $_[0];
+    eval { _scrub(\$_[0]); }; # scrub it, but beware constants (read-only)
+    return ();
+}
+
+
+=head2 Direct access - possibly deprecated?
 
 The entire point of this class is to ensure that temporary values
-passed around are not abandoned in unused memory.  Perhaps there are
-other ways, but this seems to require direct arrayref access.
+passed around are not abandoned in unused memory.
+
+This initially seemed to require direct arrayref access, so there were
+no accessors and the object was de-referenced as C<$obj->[0]> for
+reading or writing.
+
+Testing showed that normal accessors can work without leaving copies
+around, but those tests are fragile - cause of failure unknown.
+
+For this reason I suggest accessing the value as C<$$foo[0]> with a
+controlled set of names C<foo>, so they may be found and replaced more
+easily later.
 
 
 =head1 METHODS
@@ -69,11 +113,16 @@ Leaves the object containing the empty string.  Returns nothing.
 
 sub scrub {
     my ($self) = @_;
-    my $L = length($$self[0]);
+    return _scrub(\$$self[0]);
+}
+
+sub _scrub {
+    my $scref = $_[-1]; # as method or sub
+    my $L = length($$scref);
     for (my $i=0; $i<$L; $i++) {
-        substr($$self[0], $i, 1) = "\x00";
+        substr($$scref, $i, 1) = "\x00";
     }
-    $$self[0] = ''; # blank it, don't replace the SCALAR
+    $$scref = '';
     return ();
 }
 
