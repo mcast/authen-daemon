@@ -119,12 +119,15 @@ sub set_from_term {
     $prompt ||= 'Password: ';
     $timeout ||= 0;
 
-    eval { use Term::ReadPassword::Win32 'read_password'; 1 } or
-      eval { use Term::ReadPassword 'read_password'; 1 } or
-        croak "Could not load a Term::ReadPassword: $@";
+    my $loaded =
+      (eval { require Term::ReadPassword::Win32; 'Term::ReadPassword::Win32' } ||
+       eval { require Term::ReadPassword; 'Term::ReadPassword' });
+    croak "Could not load a Term::ReadPassword: $@" unless $loaded;
+
+    $loaded->import('read_password');
 
     my @pass = read_password($prompt, $timeout);
-    return $self->set_pass(\@pass);
+    return $self->set(\@pass);
 }
 
 1;

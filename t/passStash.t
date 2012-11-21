@@ -15,7 +15,7 @@ use RecipOTron;
 
 
 sub main {
-    plan tests => 25;
+    plan tests => 28;
 
     search_tt();  # 2
     fails_tt();   # 3
@@ -23,6 +23,7 @@ sub main {
     tools_tt();   # 6
     blessy_tt();  # 7
     interface_tt(); # 2
+    from_term_tt(); # 3
 }
 
 
@@ -155,5 +156,73 @@ sub interface_tt {
     $S->clear;
     like(eval { $S->utilise } || "$@", qr{password.*not set}i, 'interf: cleared');
 }
+
+
+sub from_term_tt {
+    _read_password_stubify();
+    my $pw1 = Term::ReadPassword::read_password(qw(foo bar));
+    my $want_ascr = get_last_pw_ascr()->new;
+    $want_ascr->rot128; # unhide
+    my $pw1_want = "$$want_ascr[0]:foo:bar";
+    my $pw2 = Term::ReadPassword::read_password(qw( foo bar ));
+    unless (is($pw1, $pw1_want, 'stubby password comes back') &&
+            isnt($pw2, $pw1, 'stubby password differs next time')) {
+        diagdump(pw1__got => $pw1, pw1_want => $pw1_want, pw2__got => $pw2);
+    }
+
+    my $got;
+    my $S = Authen::Daemon::PassStash->new(sub { (undef, $got) = @_; });
+    $S->set_from_term;
+    $want_ascr = get_last_pw_ascr()->new;
+    $want_ascr->rot128; # unhide
+    $S->utilise;
+    is($got->[0], "$$want_ascr[0]:Password: :0", 'set_from_term result');
+
+    _stub_check();
+}
+
+{
+    my $last_pw_ascr;
+    sub _new_last_pw {
+        my $tok = Devel::MemScan->token;
+        $last_pw_ascr = Authen::Daemon::AutoScrub->new([ $tok ]);
+        $last_pw_ascr->rot13; # break free of the copy in $tok
+        $last_pw_ascr->rot128; # hide it from memscan
+        return $last_pw_ascr->new; # return a copy
+    }
+    sub get_last_pw_ascr { # ascr : an autoscrub object
+        return $last_pw_ascr;
+    }
+}
+
+# here be pokery
+sub _read_password_stubify {
+    _stub_check();
+    $INC{'Term/ReadPassword/Win32.pm'} =
+      $INC{'Term/ReadPassword.pm'} = 'STUB';
+    my $read = sub {
+        my @arg = @_;
+        my $new_pw_ascr = _new_last_pw();
+        $new_pw_ascr->rot128;
+        # return $$new_pw_ascr[0]; # is about to be scrubbed!
+        return join ':', $$new_pw_ascr[0], @arg;
+    };
+    # place the stub where it comes from, and where we import it
+    # because we don't fake the importer
+    for my $pkg (qw( Term::ReadPassword Term::ReadPassword::Win32 Authen::Daemon::PassStash )) {
+        no strict 'refs';
+        *{"${pkg}::read_password"} = $read;
+    }
+
+    return ();
+}
+sub _stub_check {
+    my $loaded = $INC{'Term/ReadPassword.pm'} ||
+      $INC{'Term/ReadPassword/Win32.pm'};
+    die "Cannot stubify, a Term::ReadPassword is loaded from $loaded"
+      if $loaded && $loaded ne 'STUB';
+    return ();
+}
+
 
 main();
