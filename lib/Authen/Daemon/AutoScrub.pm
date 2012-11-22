@@ -1,6 +1,6 @@
-package Authen::Daemon::AutoScrub;
 use strict;
 use warnings;
+package Authen::Daemon::AutoScrub;
 use Carp;
 
 =head1 NAME
@@ -142,8 +142,8 @@ sub is_blank {
 }
 
 
-sub __per_char(&$) {
-    my ($code, $txtref) = @_;
+sub __per_char {
+    my ($txtref, $code) = @_;
     my $L = length($$txtref);
     for (my $i=0; $i<$L; $i++) {
         $code->() for substr($$txtref, $i, 1);
@@ -163,14 +163,14 @@ also be passed a reference to an arbitrary scalar.
 
 sub rot13 {
     my ($called, $txtref) = @_;
-    return __per_char { tr/a-zA-Z/n-za-mN-ZA-M/ }
-      ($txtref || \$called->[0]);
+    return __per_char($txtref || \$called->[0],
+                      sub { tr/a-zA-Z/n-za-mN-ZA-M/ });
 }
 
 sub rot128 {
     my ($called, $txtref) = @_;
-    return __per_char { tr/\x00-\xFF/\x80-\xFF\x00-\x7F/ }
-      ($txtref || \$called->[0]);
+    return __per_char($txtref || \$called->[0],
+                      sub { tr/\x00-\xFF/\x80-\xFF\x00-\x7F/ });
 }
 
 

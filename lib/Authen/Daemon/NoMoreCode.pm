@@ -1,6 +1,6 @@
-package Authen::Daemon::NoMoreCode;
 use strict;
 use warnings;
+package Authen::Daemon::NoMoreCode;
 use Carp;
 
 =head1 NAME

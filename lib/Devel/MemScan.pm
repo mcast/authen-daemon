@@ -1,7 +1,7 @@
-package Devel::MemScan;
-
 use strict;
 use warnings;
+
+package Devel::MemScan;
 
 use Try::Tiny;
 use Devel::MemScan::Hit;

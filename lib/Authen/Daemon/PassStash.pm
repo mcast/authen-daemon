@@ -1,6 +1,6 @@
-package Authen::Daemon::PassStash;
 use strict;
 use warnings;
+package Authen::Daemon::PassStash;
 use Carp;
 use Authen::Daemon::AutoScrub;
 

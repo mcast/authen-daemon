@@ -1,6 +1,6 @@
-package Devel::MemScan::Hit;
 use strict;
 use warnings;
+package Devel::MemScan::Hit;
 
 =head1 NAME
 
