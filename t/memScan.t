@@ -5,7 +5,7 @@ use warnings;
 use Test::More;
 use Devel::MemScan;
 
-use lib 't/tlib';
+use lib 't/lib';
 use DiagDump 'diagdump';
 
 

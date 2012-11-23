@@ -9,7 +9,7 @@ use Try::Tiny;
 use Devel::MemScan;
 use Authen::Daemon::PassStash;
 
-use lib 't/tlib';
+use lib 't/lib';
 use DiagDump 'diagdump';
 use RecipOTron;
 

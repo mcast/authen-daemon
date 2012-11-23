@@ -6,7 +6,7 @@ use Test::More;
 use Devel::MemScan;
 use Authen::Daemon::AutoScrub;
 
-use lib 't/tlib';
+use lib 't/lib';
 use DiagDump 'diagdump';
 
 sub main {
